@@ -4,7 +4,7 @@ import { Manrope } from 'next/font/google';
 import { cn } from '../lib/utils';
 import './globals.css';
 import { ReactNode } from 'react';
-
+import type { Metadata } from 'next'
 const fontHeading = Manrope({
   subsets: ['latin'],
   display: 'swap',
@@ -17,6 +17,10 @@ const fontBody = Manrope({
   variable: '--font-body',
 });
 
+export const metadata: Metadata = {
+  title: "Creator Studio",
+  description: "From Inspiration to Creation, We’ve Got You Covered",
+};
 interface LayoutProps {
   children: ReactNode;
 }
