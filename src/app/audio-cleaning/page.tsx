@@ -1,11 +1,11 @@
 import React from 'react'
 
-function RemoveBg() {
+function page() {
   return (
     <div>
-
+      Audio Cleaning 
     </div>
   )
 }
 
-export default RemoveBg
+export default page

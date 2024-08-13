@@ -1,9 +1,11 @@
+import Link from 'next/link'
 import React from 'react'
 
 function AudioCleaning() {
   return (
     <div>
-      <h1>Audio Cleaning</h1>
+    
+      <Link href="/audio-cleaning">  Audio Cleaning </Link> 
     </div>
   )
 }

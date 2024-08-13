@@ -2,6 +2,7 @@ import AudioCleaning from "@/components/AudioCleaning";
 import Header from "@/components/Header";
 import HeroSection from "@/components/Hero";
 import RemoveBg from "@/components/RemoveBg";
+import ChatGPT from "@/components/ChatGpt";
 
 // import Image from "next/image";
 
@@ -12,6 +13,7 @@ export default function Home() {
     <HeroSection/>   
     <RemoveBg/>
     <AudioCleaning/>
-    </>
+     <ChatGPT/> 
+        </>
   );
 }
