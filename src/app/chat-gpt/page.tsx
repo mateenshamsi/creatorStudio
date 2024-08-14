@@ -62,7 +62,7 @@ const ChatGPT: React.FC = () => {
           ) : (
             <div className="space-y-2">
               {messages.map((message, index) => (
-                <div key={index} className="p-2 bg-white rounded-lg shadow">
+                <div key={index} className="p-2 bg-white text-black rounded-lg shadow">
                   {message}
                 </div>
               ))}

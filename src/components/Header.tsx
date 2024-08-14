@@ -4,9 +4,9 @@ import React from 'react'
 
 export default function Header() {
   return (
-    <header className="px-4 lg:px-6 h-14 flex items-center justify-center">
-    <Link href="#" className="flex items-center justify-center" prefetch={false}>
-      <BrushIcon className="size-6" />
+    <header className="px-4  mt-4 lg:px-6 h-14 flex items-center justify-center">
+    <Link href="/" className="flex items-center justify-center" prefetch={false}>
+      <BrushIcon  />
       <span className="sr-only">Creator Studio</span>
     </Link>
      <nav className='ml-auto flex gap-4 '>

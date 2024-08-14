@@ -5,6 +5,7 @@ import { cn } from '../lib/utils';
 import './globals.css';
 import { ReactNode } from 'react';
 import type { Metadata } from 'next'
+import Header from '@/components/Header';
 const fontHeading = Manrope({
   subsets: ['latin'],
   display: 'swap',
@@ -35,6 +36,7 @@ export default function Layout({ children }: LayoutProps) {
           fontBody.variable
         )}
       >
+        <Header/>
         {children}
       </body>
     </html>
