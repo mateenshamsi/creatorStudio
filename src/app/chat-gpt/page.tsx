@@ -47,6 +47,7 @@ const Sidebar: React.FC = () => {
 const ChatGPT: React.FC = () => {
   const [messages, setMessages] = useState<{ text: string; sender: 'user' | 'bot' }[]>([]);
   const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSend = async () => {
     if (input.trim()) {
@@ -58,6 +59,8 @@ const ChatGPT: React.FC = () => {
         setMessages([...messages, { text: input, sender: 'user' }, { text: result.response.text(), sender: 'bot' }]);
       } catch (error) {
         setMessages([...messages, { text: input, sender: 'user' }, { text: "Something went wrong.", sender: 'bot' }]);
+      } finally {
+        setIsLoading(false); // <-- Set loading to false
       }
       setInput('');
     }
@@ -74,9 +77,14 @@ const ChatGPT: React.FC = () => {
             <div className="space-y-2">
               {messages.map((message, index) => (
                 <div key={index} className={`p-2 rounded-lg shadow ${message.sender === 'user' ? 'bg-blue-500 text-white self-end' : 'bg-gray-300 text-black self-start'}`}>
-                  <ReactMarkdown>{message.text}</ReactMarkdown>
-                </div>
+                <ReactMarkdown>{message.text}</ReactMarkdown>
+              </div>
               ))}
+              {isLoading && (
+                <div className="flex justify-center items-center py-4">
+                  <div className="w-6 h-6 border-4 border-t-4 border-gray-500 border-solid rounded-full animate-spin"></div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -95,7 +103,6 @@ const ChatGPT: React.FC = () => {
               className="flex-1 p-2 border rounded-l-lg focus:outline-none text-black"
               placeholder="Type your message..."
             />
-
             <button
               onClick={handleSend}
               className="p-2 bg-blue-500 text-white rounded-r-lg hover:bg-blue-600"
@@ -107,6 +114,6 @@ const ChatGPT: React.FC = () => {
       </div>
     </div>
   );
-};
+}
 
 export default ChatGPT;
