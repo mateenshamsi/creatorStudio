@@ -20,7 +20,7 @@ const fontBody = Manrope({
 
 export const metadata: Metadata = {
   title: "Creator Studio",
-  description: "From Inspiration to Creation, We’ve Got You Covered",
+  description: "From Inspiration to Creation, We've Got You Covered",
 };
 interface LayoutProps {
   children: ReactNode;
@@ -36,7 +36,7 @@ export default function Layout({ children }: LayoutProps) {
           fontBody.variable
         )}
       >
-        <Header/>
+        {/* <Header/> */}
         {children}
       </body>
     </html>
