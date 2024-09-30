@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Button } from "@/components/ui/button"
 
+
 const Header = () => (
   <header className="fixed top-0 left-0 right-0 z-50 bg-black bg-opacity-20 backdrop-blur-md border-b border-blue-500 shadow-lg">
     <nav className="container mx-auto px-6 py-3">
@@ -93,8 +94,8 @@ export default function EnhancedHeroSection() {
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="text-lg border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white">
-              <Link href="/chat-gpt">
-                Try ChatGPT
+              <Link href="/chatStudio">
+                Try ChatStudio
               </Link>
             </Button>
           </motion.div>
