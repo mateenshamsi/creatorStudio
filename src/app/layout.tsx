@@ -2,10 +2,11 @@
 // Learn more: https://nextjs.org/docs/app/building-your-application/routing/pages-and-layouts#root-layout-required
 import { Manrope } from 'next/font/google';
 import Head from './head';
-import { cn } from '../lib/utils';
+import { cn } from '../libs/utils';
 import './globals.css';
 import { ReactNode } from 'react';
 import type { Metadata } from 'next'
+import {ClerkProvider} from '@clerk/nextjs'
 import Header from '@/components/Header';
 const fontHeading = Manrope({
   subsets: ['latin'],
@@ -37,8 +38,10 @@ export default function Layout({ children }: LayoutProps) {
           fontBody.variable
         )}
       >
+        <ClerkProvider> 
         {/* <Header/> */}
         {children}
+        </ClerkProvider>
       </body>
     </html>
   );

@@ -1,5 +1,4 @@
 import AudioCleaning from "@/components/AudioCleaning";
-import Header from "@/components/Header";
 import HeroSection from "@/components/Hero";
 import Head from "./head";
 import RemoveBg from "@/components/RemoveBg";
@@ -15,7 +14,7 @@ export default function Home() {
     <Head/>
     <ShootingStars className="-z-10"/>
     <StarsBackground className="-z-10"/>
-    <HeroSection/>   
+    <HeroSection/> 
         </>
   );
 }
