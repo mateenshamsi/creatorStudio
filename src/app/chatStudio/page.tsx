@@ -1,13 +1,18 @@
+// src/app/chatStudio/page.tsx
+
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { ChevronDown, Edit3, Menu, MessageCircle, Send, Plus, X } from 'lucide-react'
-import { GoogleGenerativeAI } from "@google/generative-ai"
+import Groq from "groq-sdk";
 import ReactMarkdown from 'react-markdown'
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 type Message = {
   text: string;
@@ -26,6 +31,10 @@ export default function ChatStudio() {
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [models, setModels] = useState<string[]>([])
+  const [selectedModel, setSelectedModel] = useState<string | null>(null)
+  const [isModelsLoading, setIsModelsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const savedConversations = localStorage.getItem('conversations')
@@ -38,50 +47,103 @@ export default function ChatStudio() {
     localStorage.setItem('conversations', JSON.stringify(conversations))
   }, [conversations])
 
-  const handleSend = async () => {
-    if (input.trim()) {
-      setIsLoading(true)
-      const newMessage: Message = { text: input, sender: 'user' }
-      let updatedConversation: Conversation
+  useEffect(() => {
+    fetchModels();
+  }, []);
+
+  const fetchModels = async () => {
+    setIsModelsLoading(true);
+    setError(null);
+    try {
+      console.log('Client: Fetching models...');
+      const response = await fetch('/api/models');
+      console.log('Client: Response status:', response.status);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch models: ${response.status} ${response.statusText}`);
+      }
+      const data = await response.json();
+      console.log('Client: Model Response:', data);
+      if (data && data.data) {
+        const modelIds = data.data.map(model => model.id);
+        console.log('Client: Fetched Models:', modelIds);
+        setModels(modelIds);
+        setSelectedModel(modelIds[0]);
+      } else {
+        throw new Error('Invalid response from API');
+      }
+    } catch (error) {
+      console.error('Client: Error fetching models:', error);
+      setError(`Failed to fetch models: ${error.message}`);
+    } finally {
+      setIsModelsLoading(false);
+    }
+  }
+
+  const handleSend = useCallback(async () => {
+    if (input.trim() && selectedModel) {
+      setIsLoading(true);
+      setError(null);
+      const newMessage: Message = { text: input, sender: 'user' };
+      let updatedConversation: Conversation;
 
       if (currentConversation) {
         updatedConversation = {
           ...currentConversation,
           messages: [...currentConversation.messages, newMessage]
-        }
+        };
       } else {
         updatedConversation = {
           id: Date.now().toString(),
           title: input.slice(0, 30),
           messages: [newMessage]
-        }
+        };
       }
 
-      setCurrentConversation(updatedConversation)
-      setInput('')
+      setCurrentConversation(updatedConversation);
+      setInput('');
 
       try {
-        const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY!)
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
-        
-        const result = await model.generateContent(input)
-        const botMessage: Message = { text: result.response.text(), sender: 'bot' }
-        updatedConversation.messages.push(botMessage)
+        console.log('Sending message to server...');
+        const response = await fetch('/api/sendMessage', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message: input, model: selectedModel }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to send message: ${response.status} ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        console.log('Server response:', result);
+        const botMessage: Message = { text: result.choices[0]?.message?.content || "No response", sender: 'bot' };
+        updatedConversation.messages.push(botMessage);
       } catch (error) {
-        const errorMessage: Message = { text: "Something went wrong.", sender: 'bot' }
-        updatedConversation.messages.push(errorMessage)
+        console.error('Error sending message:', error);
+        const errorMessage: Message = { text: "Something went wrong. Please try again.", sender: 'bot' };
+        updatedConversation.messages.push(errorMessage);
+        setError(`Failed to send message. Please check your API key and network connection. Error: ${error.message}`);
       } finally {
-        setIsLoading(false)
-        setCurrentConversation(updatedConversation)
-        
+        setIsLoading(false);
+        setCurrentConversation(updatedConversation);
+
         setConversations(prev =>
           currentConversation
             ? prev.map(conv => conv.id === currentConversation.id ? updatedConversation : conv)
             : [updatedConversation, ...prev]
-        )
+        );
       }
     }
-  }
+  }, [input, selectedModel, currentConversation]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
 
   const startNewConversation = () => {
     if (currentConversation && currentConversation.messages.length > 0) {
@@ -153,6 +215,24 @@ export default function ChatStudio() {
           >
             <Edit3 className="h-5 w-5" />
           </Button>
+          <div className="relative">
+            {isModelsLoading ? (
+              <div className="bg-[#2A2A2A] text-white border border-gray-600 rounded-md p-2">Loading models...</div>
+            ) : error ? (
+              <div className="bg-[#2A2A2A] text-red-500 border border-gray-600 rounded-md p-2">{error}</div>
+            ) : (
+              <select
+                value={selectedModel || ''}
+                onChange={(e) => setSelectedModel(e.target.value)}
+                className="bg-[#2A2A2A] text-white border border-gray-600 rounded-md p-2 appearance-none"
+              >
+                {models.map(model => (
+                  <option key={model} value={model}>{model}</option>
+                ))}
+              </select>
+            )}
+            <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+          </div>
         </div>
 
         <ScrollArea className="flex-1 p-4 overflow-y-auto">
@@ -161,9 +241,8 @@ export default function ChatStudio() {
               {currentConversation.messages.map((message, index) => (
                 <div
                   key={index}
-                  className={`p-4 rounded-lg ${
-                    message.sender === 'user' ? 'bg-blue-600 ml-auto' : 'bg-gray-700'
-                  } max-w-[80%]`}
+                  className={`p-4 rounded-lg ${message.sender === 'user' ? 'bg-blue-600 ml-auto' : 'bg-gray-700'
+                    } max-w-[80%]`}
                 >
                   <ReactMarkdown>{message.text}</ReactMarkdown>
                 </div>
@@ -188,17 +267,13 @@ export default function ChatStudio() {
         </ScrollArea>
 
         <div className="p-4 border-t border-gray-700">
+          {error && <div className="text-red-500 mb-2">{error}</div>}
           <div className="flex items-center max-w-4xl mx-auto">
             <Input
               placeholder="Message Creator Studio..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  handleSend()
-                }
-              }}
+              onKeyDown={handleKeyDown}
               className="flex-1 bg-[#2A2A2A] border-gray-600 focus:border-blue-500 text-lg py-4"
             />
             <Button className="ml-4 bg-blue-600 hover:bg-blue-700" size="lg" onClick={handleSend} disabled={isLoading}>
