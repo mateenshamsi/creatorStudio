@@ -17,6 +17,7 @@ dotenv.config();
 type Message = {
   text: string;
   sender: 'user' | 'bot';
+  file?: File | null; // New field for file attachments
 }
 
 type Conversation = {
@@ -79,11 +80,13 @@ export default function ChatStudio() {
     }
   }
 
+  const [file, setFile] = useState<File | null>(null); // New state for file input
+
   const handleSend = useCallback(async () => {
-    if (input.trim() && selectedModel) {
+    if ((input.trim() || file) && selectedModel) {
       setIsLoading(true);
       setError(null);
-      const newMessage: Message = { text: input, sender: 'user' };
+      const newMessage: Message = { text: input, sender: 'user', file };
       let updatedConversation: Conversation;
 
       if (currentConversation) {
@@ -101,15 +104,20 @@ export default function ChatStudio() {
 
       setCurrentConversation(updatedConversation);
       setInput('');
+      setFile(null); // Clear the file input after sending
 
       try {
         console.log('Sending message to server...');
+        const formData = new FormData();
+        formData.append('message', input);
+        formData.append('model', selectedModel);
+        if (file) {
+          formData.append('file', file);
+        }
+
         const response = await fetch('/api/sendMessage', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ message: input, model: selectedModel }),
+          body: formData,
         });
 
         if (!response.ok) {
@@ -136,7 +144,7 @@ export default function ChatStudio() {
         );
       }
     }
-  }, [input, selectedModel, currentConversation]);
+  }, [input, file, selectedModel, currentConversation]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -275,6 +283,11 @@ export default function ChatStudio() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               className="flex-1 bg-[#2A2A2A] border-gray-600 focus:border-blue-500 text-lg py-4"
+            />
+            <input
+              type="file"
+              onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)} // New state to handle file input
+              className="ml-4 bg-[#2A2A2A] text-white border border-gray-600 rounded-md p-2"
             />
             <Button className="ml-4 bg-blue-600 hover:bg-blue-700" size="lg" onClick={handleSend} disabled={isLoading}>
               <Send className="h-5 w-5" />

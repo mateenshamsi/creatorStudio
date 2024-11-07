@@ -11,6 +11,8 @@ import {
   SignedOut,
   UserButton
 } from '@clerk/nextjs'
+import HeaderLogo from '@/Icons/HeaderLogo'
+
 
 const Header = () => (
   <header className="fixed top-0 left-0 right-0 z-50 bg-black bg-opacity-20 backdrop-blur-md border-b border-blue-500 shadow-lg">
@@ -90,6 +92,7 @@ export default function EnhancedHeroSection() {
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.2, duration: 0.8 }}
           >
+            <HeaderLogo height={43 * 2.5} width={10 * 2.5} className="container bg-center flex"></HeaderLogo>
             {/* main logo with name  */}
           </motion.div>
           <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-teal-400">
@@ -104,14 +107,19 @@ export default function EnhancedHeroSection() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.8 }}
           >
-            <Button asChild size="lg" className="text-lg bg-blue-500 hover:bg-blue-600">
+            <Button asChild variant="outline" size="lg" className="text-lg border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white">
               <Link href="/removebg">
-                Try RemoveBg
+                Try ImageStudio
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="text-lg border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white">
               <Link href="/chatStudio">
                 Try ChatStudio
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="text-lg border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white">
+              <Link href="https://clearcut.streamlit.app/">
+                Try SoundStudio
               </Link>
             </Button>
           </motion.div>
