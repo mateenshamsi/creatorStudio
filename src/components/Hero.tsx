@@ -9,7 +9,9 @@ import {
   SignInButton,
   SignedIn,
   SignedOut,
-  UserButton
+  UserButton,
+  SignUp,
+  SignUpButton
 } from '@clerk/nextjs'
 import HeaderLogo from '@/Icons/HeaderLogo'
 
@@ -34,11 +36,17 @@ const Header = () => (
           </SignedIn>
           <SignedOut>
             {/* Show Sign In button */}
-            <SignInButton mode="modal">
+            <SignInButton>
               <button className="text-white hover:text-blue-400 transition-colors">
                 Sign In
               </button>
             </SignInButton>
+            <SignUpButton >
+              <button className="text-white hover:text-blue-400 transition-colors">
+                Sign Up
+              </button>
+            </SignUpButton>
+ 
           </SignedOut>
         </ul>
       </div>

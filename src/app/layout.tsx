@@ -38,7 +38,7 @@ export default function Layout({ children }: LayoutProps) {
           fontBody.variable
         )}
       >
-        <ClerkProvider> 
+        <ClerkProvider signUpUrl='/sign-up' signInUrl='/sign-in' signInFallbackRedirectUrl={null}> 
         {/* <Header/> */}
         {children}
         </ClerkProvider>
