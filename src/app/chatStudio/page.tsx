@@ -164,11 +164,6 @@ export default function ChatStudio() {
   return (
     <div className="flex h-screen bg-[#1E1E1E] text-white">
       <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
-        <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="fixed top-4 left-4 z-50">
-            <Menu className="h-6 w-6" />
-          </Button>
-        </SheetTrigger>
         <SheetContent side="left" className="w-80 bg-[#2A2A2A] p-0 border-r border-gray-700">
           <div className="p-6 flex items-center justify-between border-b border-gray-700">
             <Button variant="ghost" className="text-white text-xl font-bold" onClick={startNewConversation}>
@@ -197,16 +192,13 @@ export default function ChatStudio() {
               ))}
             </div>
           </ScrollArea>
-          <div className="p-4 border-t border-gray-700">
-            {/* <Button variant="outline" className="w-full">
-              Upgrade plan
-            </Button> */}
-          </div>
         </SheetContent>
       </Sheet>
 
       <div className="flex-1 flex flex-col h-screen">
         <div className="flex justify-between items-center p-4 border-b border-gray-700">
+
+          {/* Sidebar Button Menu Open Close */}
           <Button
             variant="outline"
             size="icon"
@@ -215,31 +207,38 @@ export default function ChatStudio() {
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="bg-gray-800/50 backdrop-blur-sm"
-            onClick={startNewConversation}
-          >
-            <Edit3 className="h-5 w-5" />
-          </Button>
-          <div className="relative">
-            {isModelsLoading ? (
-              <div className="bg-[#2A2A2A] text-white border border-gray-600 rounded-md p-2">Loading models...</div>
-            ) : error ? (
-              <div className="bg-[#2A2A2A] text-red-500 border border-gray-600 rounded-md p-2">{error}</div>
-            ) : (
-              <select
-                value={selectedModel || ''}
-                onChange={(e) => setSelectedModel(e.target.value)}
-                className="bg-[#2A2A2A] text-white border border-gray-600 rounded-md p-2 appearance-none"
-              >
-                {models.map(model => (
-                  <option key={model} value={model}>{model}</option>
-                ))}
-              </select>
-            )}
-            <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+
+          {/* Navbar Right HandSide Buttons like New Chat and Model selction */}
+          <div className="flex space-x-4">
+            {/* New Chat Button  */}
+            <Button
+              variant="outline"
+              size="icon"
+              className="bg-gray-800/50 backdrop-blur-sm"
+              onClick={startNewConversation}
+            >
+              <Edit3 className="h-5 w-5" />
+            </Button>
+
+            {/* Model Selection  */}
+            <div className="relative">
+              {isModelsLoading ? (
+                <div className="bg-[#2A2A2A] text-white border border-gray-600 rounded-md p-2">Loading models...</div>
+              ) : error ? (
+                <div className="bg-[#2A2A2A] text-red-500 border border-gray-600 rounded-md p-2">{error}</div>
+              ) : (
+                <select
+                  value={selectedModel || ''}
+                  onChange={(e) => setSelectedModel(e.target.value)}
+                  className="bg-[#2A2A2A] text-white border border-gray-600 rounded-md p-2 appearance-none"
+                >
+                  {models.map(model => (
+                    <option key={model} value={model}>{model}</option>
+                  ))}
+                </select>
+              )}
+              <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+            </div>
           </div>
         </div>
 
