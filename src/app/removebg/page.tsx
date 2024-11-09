@@ -1,150 +1,127 @@
-"use client";
-import Image from "next/image";
-import Link from "next/link";
-import Logo from "@/Icons/Logo";
-import React, { useRef, useState } from "react";
+'use client';
 
-export default function LandingPage() {
-  const fileInputRef = useRef(null);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [isDragging, setIsDragging] = useState(false);
+import { FormEvent, useState } from 'react';
+import axios from 'axios';
+import { Button } from '@/components/ui/button';
+import { CldImage, CldUploadWidget } from 'next-cloudinary';
 
-  const handleImageUpload = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
+// Add this at the top of your file
+declare global {
+  var cloudinary: any;
+}
+
+export default function ImageUploader() {
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [uploadedImageId, setUploadedImageId] = useState("");
+
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+
+  // Add this check at the start of your component
+  if (!cloudName) {
+    console.error('No cloudinary name found');
+    return (
+      <div className="text-red-500">
+        Please configure your Cloudinary cloud name in environment variables.
+      </div>
+    );
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const file = e.target.files[0];
+      if (file) {
+        setImageFile(file);
+        setError(null);
+        const previewUrl = URL.createObjectURL(file);
+        setImageUrl(previewUrl);
+      }
     }
   };
 
-  const handleFileChange = (event) => {
-    const file = event.target.files ? event.target.files[0] : event.dataTransfer.files[0];
-    if (file) {
-      const imageUrl = URL.createObjectURL(file);
-      setImagePreview(imageUrl);
-      console.log("Uploaded file:", file);
+  const onSumbitHandler = async(e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      if(!imageFile) {
+        setError("Please select an image");
+        return;
+      }
+      const formData = new FormData();
+      formData.append("image", imageFile);
+
+      const res = await axios.post('/api/upload-image', formData);
+      const data = await res.data;
+      console.log("Upload response:", data);
+      
+      if(data && data.public_id) {
+        setUploadedImageId(data.public_id);
+      } else {
+        setError("Failed to get image ID from upload");
+      }
+    } catch(err: any) {
+      console.error("Error uploading image:", err);
+      setError(err.message || "Error uploading image");
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const handleDragOver = (event) => {
-    event.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
-
-  const handleDrop = (event) => {
-    event.preventDefault();
-    setIsDragging(false);
-    handleFileChange(event); // Handle the dropped file
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* Header */}
-      <header className="flex items-center justify-between p-5 bg-white">
-        <div className="flex items-center space-x-4">
-          <Logo height={48} width={48} className="container bg-center flex" />
-          <nav className="hidden md:flex space-x-4">
-            {["Features", "Use Cases", "Pricing", "Blog"].map((item) => (
-              <Link href="#" key={item} className="text-sm font-medium">
-                {item}
-              </Link>
-            ))}
-          </nav>
-        </div>
-        <div className="flex items-center space-x-4">
-          <button className="text-sm font-medium">Log in</button>
-          <button className="bg-blue-500 text-white px-4 py-2 rounded-md text-sm font-medium">
-            Sign up
-          </button>
-        </div>
-      </header>
+    <div className="flex flex-col gap-6 p-4 max-w-2xl mx-auto">
+      <form onSubmit={onSumbitHandler} className="flex flex-col gap-4">
+        <input 
+          type="file" 
+          onChange={handleFileChange}
+          accept="image/*"
+          className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0
+            file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700
+            hover:file:bg-blue-100"
+        />
+        <Button 
+          type="submit" 
+          disabled={loading || !imageFile}
+          className="w-full"
+        >
+          {loading ? 'Uploading...' : 'Upload'}
+        </Button>
+      </form>
 
-      {/* Main content */}
-      <main className="flex-grow">
-        <section className="relative px-6 py-20 mx-auto my-10 max-w-screen-lg">
-          <div className="flex flex-col md:flex-row items-center">
-            <div className="md:w-1/2 p-6">
-              <Image
-                src="/images/Image Studio Main Image.jpg"
-                alt="Remove Image Background"
-                width={813}
-                height={542}
-                className="rounded-2xl"
-              />
-            </div>
-            <div className="md:w-1/2 mb-10">
-              <h1 className="text-4xl md:text-6xl font-bold mb-6">
-                Remove Image Background
-              </h1>
-              <p className="text-xl mb-8">
-                100% automatically - in 5 seconds - without a single click
-              </p>
-              <div
-                className={`bg-white p-6 rounded-lg shadow-lg border-2 ${isDragging ? "border-blue-500" : "border-gray-300"} border-dashed`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-              >
-                <div className="rounded-lg p-6 text-center">
-                  <p className="mb-4">Drop an image here</p>
-                  <p className="text-sm text-gray-500">or</p>
-                  <button
-                    onClick={handleImageUpload}
-                    className="mt-4 bg-blue-500 text-white px-4 py-2 rounded-md text-sm font-medium"
-                    aria-label="Upload Image"
-                  >
-                    Upload Image
-                  </button>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    className="hidden"
-                    accept="image/*"
-                  />
-                </div>
+      {error && (
+        <div className="text-red-500 text-sm">{error}</div>
+      )}
 
-                {/* Preview Section */}
-                {imagePreview && (
-                  <div className="mt-4">
-                    <p className="text-center">Preview:</p>
-                    <Image
-                      src={imagePreview}
-                      alt="Image Preview"
-                      width={300}
-                      height={300}
-                      className="rounded-md mx-auto"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Local Preview */}
+        {imageUrl && (
+          <div className="flex flex-col gap-2">
+            <h3 className="text-lg font-semibold">Original Preview:</h3>
+            <img 
+              src={imageUrl} 
+              alt="Preview" 
+              className="w-full h-auto rounded-lg shadow-md"
+            />
           </div>
-        </section>
-      </main>
+        )}
 
-      {/* Footer */}
-      <footer className="bg-gray-800 text-white py-12">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
-            <div>
-              <h3 className="font-bold mb-4">Company</h3>
-              <ul className="space-y-2">
-                {["About", "Careers", "Contact"].map((item) => (
-                  <li key={item}>
-                    <Link href="#" className="hover:underline">
-                      {item}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            {/* Add other footer sections here */}
+        {/* Cloudinary Image with Background Removal */}
+        {uploadedImageId && (
+          <div className="flex flex-col gap-2">
+            <h3 className="text-lg font-semibold">Processed Image:</h3>
+            <CldImage
+              width="400"
+              height="400"
+              src={uploadedImageId}
+              sizes="100vw"
+              alt="Uploaded image"
+              removeBackground
+              className="w-full h-auto rounded-lg shadow-md"
+            />
           </div>
-        </div>
-      </footer>
+        )}
+      </div>
     </div>
   );
 }
