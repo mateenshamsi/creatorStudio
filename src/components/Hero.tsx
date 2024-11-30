@@ -116,7 +116,7 @@ export default function EnhancedHeroSection() {
             transition={{ delay: 0.2, duration: 0.8 }}
           >
             <Button asChild variant="outline" size="lg" className="text-lg border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white">
-              <Link href="/removebg">
+              <Link href="https://clearcut.streamlit.app/">
                 Try ImageStudio
               </Link>
             </Button>
@@ -126,7 +126,7 @@ export default function EnhancedHeroSection() {
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="text-lg border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white">
-              <Link href="https://clearcut.streamlit.app/">
+              <Link href="/soundStudio">
                 Try SoundStudio
               </Link>
             </Button>

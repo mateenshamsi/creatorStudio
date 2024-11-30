@@ -11,6 +11,7 @@ import { ChevronDown, Edit3, Menu, MessageCircle, Send, Plus, X } from 'lucide-r
 import Groq from "groq-sdk";
 import ReactMarkdown from 'react-markdown'
 import dotenv from 'dotenv';
+import HeaderLogo from '@/Icons/HeaderLogo'
 
 dotenv.config();
 
@@ -263,9 +264,9 @@ export default function ChatStudio() {
           ) : (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
-                <center>
-                  {/* TODO: Add SVG logo here */}
-                </center>
+                {/* <center>
+                  <HeaderLogo width={43*7} height={10*7} className={undefined}></HeaderLogo>
+                </center> */}
                 <h2 className="text-3xl font-bold mb-4">Welcome to Creator Studio</h2>
                 <p className="text-gray-400 text-lg">Start a new conversation or select an existing one from the sidebar.</p>
               </div>
