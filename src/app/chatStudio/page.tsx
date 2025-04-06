@@ -1,24 +1,20 @@
-// src/app/chatStudio/page.tsx
-
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { ChevronDown, Edit3, Menu, MessageCircle, Send, Plus, X } from 'lucide-react'
-import Groq from "groq-sdk";
+import { Sheet, SheetContent } from "@/components/ui/sheet"
+import { ChevronDown, Edit3, Menu, Send, Mic, ImageIcon, Volume2 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
-import dotenv from 'dotenv';
-import HeaderLogo from '@/Icons/HeaderLogo'
-
-dotenv.config();
+import { groupModelsByCategory } from "@/libs/modelUtils"
+import { getModelMetadata, ModelCategory, ModelMetadata } from '@/types/model'
 
 type Message = {
   text: string;
   sender: 'user' | 'bot';
-  file?: File | null; // New field for file attachments
+  file?: File | null;
+  fileType?: 'audio' | 'image' | null;
 }
 
 type Conversation = {
@@ -33,11 +29,14 @@ export default function ChatStudio() {
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const [models, setModels] = useState<string[]>([])
+  const [modelGroups, setModelGroups] = useState<Record<ModelCategory, ModelMetadata[]>>()
   const [selectedModel, setSelectedModel] = useState<string | null>(null)
   const [isModelsLoading, setIsModelsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [activeCategory, setActiveCategory] = useState<ModelCategory>('chat')
+  const [file, setFile] = useState<File | null>(null)
 
+  // Load conversations from localStorage
   useEffect(() => {
     const savedConversations = localStorage.getItem('conversations')
     if (savedConversations) {
@@ -45,125 +44,137 @@ export default function ChatStudio() {
     }
   }, [])
 
+  // Save conversations to localStorage
   useEffect(() => {
     localStorage.setItem('conversations', JSON.stringify(conversations))
   }, [conversations])
 
+  // Fetch models on mount
   useEffect(() => {
-    fetchModels();
-  }, []);
+    fetchModels()
+  }, [])
 
   const fetchModels = async () => {
-    setIsModelsLoading(true);
-    setError(null);
+    setIsModelsLoading(true)
+    setError(null)
     try {
-      console.log('Client: Fetching models...');
-      const response = await fetch('/api/models');
-      console.log('Client: Response status:', response.status);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch models: ${response.status} ${response.statusText}`);
-      }
-      const data = await response.json();
-      console.log('Client: Model Response:', data);
-      if (data && data.data) {
-        const modelIds = data.data.map(model => model.id);
-        console.log('Client: Fetched Models:', modelIds);
-        setModels(modelIds);
-        setSelectedModel(modelIds[0]);
-      } else {
-        throw new Error('Invalid response from API');
-      }
+      const response = await fetch('/api/models')
+      if (!response.ok) throw new Error(`Failed to fetch models: ${response.status}`)
+
+      const data = await response.json()
+      const modelIds = data.data.map((model: any) => model.id)
+      const models = modelIds.map((id: string) => getModelMetadata(id))
+      const grouped = groupModelsByCategory(models)
+
+      setModelGroups(grouped)
+      setSelectedModel(grouped[activeCategory]?.[0]?.id || null)
     } catch (error) {
-      console.error('Client: Error fetching models:', error);
-      setError(`Failed to fetch models: ${error.message}`);
+      setError(`Failed to fetch models: ${error.message}`)
     } finally {
-      setIsModelsLoading(false);
+      setIsModelsLoading(false)
     }
   }
 
-  const [file, setFile] = useState<File | null>(null); // New state for file input
-
   const handleSend = useCallback(async () => {
     if ((input.trim() || file) && selectedModel) {
-      setIsLoading(true);
-      setError(null);
-      const newMessage: Message = { text: input, sender: 'user', file };
-      let updatedConversation: Conversation;
+      setIsLoading(true)
+      setError(null)
 
-      if (currentConversation) {
-        updatedConversation = {
-          ...currentConversation,
-          messages: [...currentConversation.messages, newMessage]
-        };
-      } else {
-        updatedConversation = {
-          id: Date.now().toString(),
-          title: input.slice(0, 30),
-          messages: [newMessage]
-        };
+      const metadata = getModelMetadata(selectedModel)
+      const newMessage: Message = {
+        text: input,
+        sender: 'user',
+        file,
+        fileType: metadata.category === 'audio-transcription' ? 'audio' :
+          metadata.category === 'vision' ? 'image' : null
       }
 
-      setCurrentConversation(updatedConversation);
-      setInput('');
-      setFile(null); // Clear the file input after sending
+      let updatedConversation: Conversation = currentConversation
+        ? { ...currentConversation, messages: [...currentConversation.messages, newMessage] }
+        : { id: Date.now().toString(), title: input.slice(0, 30), messages: [newMessage] }
+
+      setCurrentConversation(updatedConversation)
+      setInput('')
+      setFile(null)
 
       try {
-        console.log('Sending message to server...');
-        const formData = new FormData();
-        formData.append('message', input);
-        formData.append('model', selectedModel);
-        if (file) {
-          formData.append('file', file);
-        }
+        const formData = new FormData()
+        formData.append('message', input)
+        formData.append('model', selectedModel)
+        if (file) formData.append('file', file)
 
         const response = await fetch('/api/sendMessage', {
           method: 'POST',
           body: formData,
-        });
+        })
 
-        if (!response.ok) {
-          throw new Error(`Failed to send message: ${response.status} ${response.statusText}`);
+        if (!response.ok) throw new Error(`Failed to send message: ${response.status}`)
+
+        const result = await response.json()
+        const botMessage: Message = {
+          text: result.choices[0]?.message?.content || "No response",
+          sender: 'bot'
         }
 
-        const result = await response.json();
-        console.log('Server response:', result);
-        const botMessage: Message = { text: result.choices[0]?.message?.content || "No response", sender: 'bot' };
-        updatedConversation.messages.push(botMessage);
+        updatedConversation.messages.push(botMessage)
       } catch (error) {
-        console.error('Error sending message:', error);
-        const errorMessage: Message = { text: "Something went wrong. Please try again.", sender: 'bot' };
-        updatedConversation.messages.push(errorMessage);
-        setError(`Failed to send message. Please check your API key and network connection. Error: ${error.message}`);
+        const errorMessage: Message = {
+          text: `Error: ${error.message}`,
+          sender: 'bot'
+        }
+        updatedConversation.messages.push(errorMessage)
+        setError(error.message)
       } finally {
-        setIsLoading(false);
-        setCurrentConversation(updatedConversation);
-
+        setIsLoading(false)
+        setCurrentConversation(updatedConversation)
         setConversations(prev =>
           currentConversation
             ? prev.map(conv => conv.id === currentConversation.id ? updatedConversation : conv)
             : [updatedConversation, ...prev]
-        );
+        )
       }
     }
-  }, [input, file, selectedModel, currentConversation]);
+  }, [input, file, selectedModel, currentConversation])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
+      e.preventDefault()
+      handleSend()
     }
-  };
+  }
 
   const startNewConversation = () => {
-    if (currentConversation && currentConversation.messages.length > 0) {
+    if (currentConversation?.messages.length) {
       setConversations(prev => [currentConversation, ...prev.filter(c => c.id !== currentConversation.id)])
     }
     setCurrentConversation(null)
     setIsSidebarOpen(false)
   }
 
+  const renderMessageContent = (message: Message) => {
+    if (message.fileType === 'audio') {
+      return (
+        <audio controls className="mt-2">
+          <source src={URL.createObjectURL(message.file!)} type={message.file?.type} />
+          Your browser does not support audio playback.
+        </audio>
+      )
+    }
+    if (message.fileType === 'image') {
+      return (
+        <img
+          src={URL.createObjectURL(message.file!)}
+          alt="Uploaded content"
+          className="mt-2 max-w-full rounded"
+        />
+      )
+    }
+    return <ReactMarkdown>{message.text}</ReactMarkdown>
+  }
+
   return (
     <div className="flex h-screen bg-[#1E1E1E] text-white">
+      {/* Sidebar */}
       <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
         <SheetContent side="left" className="w-80 bg-[#2A2A2A] p-0 border-r border-gray-700">
           <div className="p-6 flex items-center justify-between border-b border-gray-700">
@@ -186,7 +197,7 @@ export default function ChatStudio() {
                   <div>
                     <div className="font-medium">{conv.title}</div>
                     <div className="text-sm text-gray-400 truncate">
-                      {conv.messages[conv.messages.length - 1].text.slice(0, 50)}...
+                      {conv.messages[conv.messages.length - 1]?.text?.slice(0, 50) || 'New chat'}...
                     </div>
                   </div>
                 </Button>
@@ -196,10 +207,9 @@ export default function ChatStudio() {
         </SheetContent>
       </Sheet>
 
+      {/* Main Content */}
       <div className="flex-1 flex flex-col h-screen">
         <div className="flex justify-between items-center p-4 border-b border-gray-700">
-
-          {/* Sidebar Button Menu Open Close */}
           <Button
             variant="outline"
             size="icon"
@@ -209,9 +219,7 @@ export default function ChatStudio() {
             <Menu className="h-5 w-5" />
           </Button>
 
-          {/* Navbar Right HandSide Buttons like New Chat and Model selction */}
           <div className="flex space-x-4">
-            {/* New Chat Button  */}
             <Button
               variant="outline"
               size="icon"
@@ -221,38 +229,70 @@ export default function ChatStudio() {
               <Edit3 className="h-5 w-5" />
             </Button>
 
-            {/* Model Selection  */}
-            <div className="relative">
-              {isModelsLoading ? (
-                <div className="bg-[#2A2A2A] text-white border border-gray-600 rounded-md p-2">Loading models...</div>
-              ) : error ? (
-                <div className="bg-[#2A2A2A] text-red-500 border border-gray-600 rounded-md p-2">{error}</div>
-              ) : (
-                <select
-                  value={selectedModel || ''}
-                  onChange={(e) => setSelectedModel(e.target.value)}
-                  className="bg-[#2A2A2A] text-white border border-gray-600 rounded-md p-2 appearance-none"
-                >
-                  {models.map(model => (
-                    <option key={model} value={model}>{model}</option>
-                  ))}
-                </select>
-              )}
-              <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+            {/* Model Category Tabs */}
+            {/* Replace the existing model category tabs with this */}
+            <div className="flex space-x-2 overflow-x-auto py-2 px-4">
+              {modelGroups && Object.entries(modelGroups).map(([category, models]) => (
+                models.length > 0 && (
+                  <Button
+                    key={category}
+                    variant={activeCategory === category ? "default" : "outline"}
+                    className={`whitespace-nowrap ${activeCategory === category ? 'bg-blue-600' : 'bg-[#2A2A2A]'}`}
+                    onClick={() => {
+                      setActiveCategory(category as ModelCategory);
+                      setSelectedModel(models[0]?.id || null);
+                    }}
+                  >
+                    {category === 'audio-transcription' && <Mic className="h-4 w-4 mr-2" />}
+                    {category === 'vision' && <ImageIcon className="h-4 w-4 mr-2" />}
+                    {category === 'text-to-speech' && <Volume2 className="h-4 w-4 mr-2" />}
+                    {category.split('-').map(w => w[0].toUpperCase() + w.slice(1)).join(' ')}
+                  </Button>
+                )
+              ))}
             </div>
           </div>
         </div>
 
+        {/* Model Selection Dropdown */}
+        {modelGroups && (
+          <div className="px-4 py-2 border-b border-gray-700">
+            <div className="relative max-w-4xl mx-auto">
+              {isModelsLoading ? (
+                <div className="bg-[#2A2A2A] text-white border border-gray-600 rounded-md p-2">
+                  Loading models...
+                </div>
+              ) : error ? (
+                <div className="bg-[#2A2A2A] text-red-500 border border-gray-600 rounded-md p-2">
+                  {error}
+                </div>
+              ) : (
+                <select
+                  value={selectedModel || ''}
+                  onChange={(e) => setSelectedModel(e.target.value)}
+                  className="bg-[#2A2A2A] text-white border border-gray-600 rounded-md p-2 w-full"
+                >
+                  {modelGroups[activeCategory]?.map((model) => (
+                    <option key={model.id} value={model.id}>
+                      {model.name || model.id}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Chat Messages */}
         <ScrollArea className="flex-1 p-4 overflow-y-auto">
           {currentConversation ? (
             <div className="space-y-6 max-w-4xl mx-auto">
               {currentConversation.messages.map((message, index) => (
                 <div
                   key={index}
-                  className={`p-4 rounded-lg ${message.sender === 'user' ? 'bg-blue-600 ml-auto' : 'bg-gray-700'
-                    } max-w-[80%]`}
+                  className={`p-4 rounded-lg ${message.sender === 'user' ? 'bg-blue-600 ml-auto' : 'bg-gray-700'} max-w-[80%]`}
                 >
-                  <ReactMarkdown>{message.text}</ReactMarkdown>
+                  {renderMessageContent(message)}
                 </div>
               ))}
               {isLoading && (
@@ -264,16 +304,16 @@ export default function ChatStudio() {
           ) : (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
-                {/* <center>
-                  <HeaderLogo width={43*7} height={10*7} className={undefined}></HeaderLogo>
-                </center> */}
                 <h2 className="text-3xl font-bold mb-4">Welcome to Creator Studio</h2>
-                <p className="text-gray-400 text-lg">Start a new conversation or select an existing one from the sidebar.</p>
+                <p className="text-gray-400 text-lg">
+                  Start a new conversation or select an existing one from the sidebar.
+                </p>
               </div>
             </div>
           )}
         </ScrollArea>
 
+        {/* Input Area */}
         <div className="p-4 border-t border-gray-700">
           {error && <div className="text-red-500 mb-2">{error}</div>}
           <div className="flex items-center max-w-4xl mx-auto">
@@ -286,10 +326,19 @@ export default function ChatStudio() {
             />
             <input
               type="file"
-              onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)} // New state to handle file input
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              accept={
+                activeCategory === 'audio-transcription' ? 'audio/*' :
+                  activeCategory === 'vision' ? 'image/*' : '*/*'
+              }
               className="ml-4 bg-[#2A2A2A] text-white border border-gray-600 rounded-md p-2"
             />
-            <Button className="ml-4 bg-blue-600 hover:bg-blue-700" size="lg" onClick={handleSend} disabled={isLoading}>
+            <Button
+              className="ml-4 bg-blue-600 hover:bg-blue-700"
+              size="lg"
+              onClick={handleSend}
+              disabled={isLoading}
+            >
               <Send className="h-5 w-5" />
             </Button>
           </div>
